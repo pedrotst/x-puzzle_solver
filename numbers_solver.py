@@ -1,8 +1,7 @@
 from random import shuffle
 from copy import deepcopy, copy
 import threading
-from math import sqrt
-from gmpy import is_square
+from board import Board
 
 class Tree(object):
     def __init__(self, action = 'root', parent = None, state = None):
@@ -12,11 +11,21 @@ class Tree(object):
         """
         self.action = action
         self.parent = parent
-        self.closed_list = [state]
         self.state = state
-        self.heuristic = self.get_heuristic()
+        heur1 = self.get_heuristic1()
+        # heur2 = self.get_heuristic2()
+        # print(heur1, heur2)
+        self.heuristic = heur1 + self.get_parentnum()
 
-    def get_heuristic(self):
+    def get_parentnum(self):
+        count = 0
+        parent = self.parent
+        while parent is not None:
+            count += 1
+            parent = parent.parent
+        return count
+
+    def get_heuristic1(self):
         board = deepcopy(self.state.get_board_list())
         heuristic = 0
         x = board.index('')
@@ -26,13 +35,28 @@ class Tree(object):
         # map_mat = zip(board_abs, board_comparator)
         # print(board)
         for pos, ele in zip(board_matrix, board):
-            pos_x, pos_y = pos
-            ele_pos_x, ele_pos_y = board_matrix[ele]
-            dist_x = abs(pos_x - ele_pos_x)
-            dist_y = abs(pos_y - ele_pos_y)
-            # print("ele: {} x_dis: {} y_dis: {}, pos_x: {}, pos_y: {} ele_pos_x: {}, ele_pos_y: {}, dist: {}".format(ele, dist_x,dist_y, pos_x, pos_y, ele_pos_x, ele_pos_y, dist_y+dist_x))
-            heuristic += dist_x + dist_y
+            if not ele == '':
+                pos_x, pos_y = pos
+                ele_pos_x, ele_pos_y = board_matrix[ele]
+                dist_x = abs(pos_x - ele_pos_x)
+                dist_y = abs(pos_y - ele_pos_y)
+                # print("ele: {} x_dis: {} y_dis: {}, pos_x: {}, pos_y: {} ele_pos_x: {}, ele_pos_y: {}, dist: {}".format(ele, dist_x,dist_y, pos_x, pos_y, ele_pos_x, ele_pos_y, dist_y+dist_x))
+                heuristic += dist_x + dist_y
         return heuristic
+
+    def get_heuristic2(self):
+        solved_list = [i for i in range(self.state.block_size ** 2)]
+        list_copy = list(self.state.get_board_list())
+        list_copy[list_copy.index('')] = 0
+        counter = 0
+        while not list_copy == solved_list:
+            print(list_copy)
+            space = list_copy.index(0)
+            correct = list_copy.index(space)
+            list_copy[space], list_copy[correct] = list_copy[correct], list_copy[space]
+            counter += 1
+        return counter
+
 
     # def set_left(self, tree):
     #     self.left = tree
@@ -122,6 +146,7 @@ class SolveBFS(SolveMethod):
                 return node
             self.fringe += self.expand_nodes(node)
             self.fringe.sort(key = lambda x: x.heuristic)
+            # print(node)
 
 
 class Solver(threading.Thread):
@@ -140,97 +165,15 @@ class Solver(threading.Thread):
         else:
             print("No solution Found!")
 
-class Board(object):
-    def __init__(self, numbers_list):
-        self.numbers_list = numbers_list
-        # shuffle(self.numbers_list)
-        self.blank_pos = numbers_list.index('')
-        list_size = len(numbers_list)
-        if is_square(list_size):
-            self.block_size = int(sqrt(list_size))
-        else:
-            raise AttributeError("List passed is not a square. This cannot be a game!")
-
-    def move(self, move_to):
-        if (((not self.blank_pos == 3) and (not self.blank_pos == 6) and self.blank_pos == move_to + 1)
-            or ((not self.blank_pos == 2) and (not self.blank_pos == 5) and self.blank_pos == move_to - 1)
-            or self.blank_pos == move_to - 3
-            or self.blank_pos == move_to + 3):
-            self.numbers_list[self.blank_pos], self.numbers_list[move_to] = self.numbers_list[move_to], self.numbers_list[self.blank_pos]
-            self.blank_pos = move_to
-        return self
-
-    def move_up(self):
-        blk = self.block_size
-        if (blk <= self.blank_pos):
-            self.numbers_list[self.blank_pos], self.numbers_list[self.blank_pos - blk] = \
-            self.numbers_list[self.blank_pos - blk], self.numbers_list[self.blank_pos]
-            self.blank_pos = self.blank_pos - blk
-        return self
-
-            
-    def move_down(self):
-        blk = self.block_size
-        if (self.blank_pos < blk*blk-blk):
-            self.numbers_list[self.blank_pos], self.numbers_list[self.blank_pos + blk] = \
-            self.numbers_list[self.blank_pos + blk], self.numbers_list[self.blank_pos]
-            self.blank_pos = self.blank_pos + blk
-        return self
-
-            
-    def move_left(self):
-        blk = self.block_size
-        condition = False
-        for i in range(blk):
-            condition = condition or (self.blank_pos == blk*i)
-        # if not (self.blank_pos == 0 or self.blank_pos == blk or self.blank_pos == blk * 2):
-        if not condition:
-            self.numbers_list[self.blank_pos], self.numbers_list[self.blank_pos - 1] = \
-            self.numbers_list[self.blank_pos - 1], self.numbers_list[self.blank_pos]
-            self.blank_pos = self.blank_pos - 1
-        return self
-
-            
-    def move_right(self):
-        blk = self.block_size
-        condition = False
-        for i in range(1,blk+1):
-            condition = condition or (self.blank_pos == blk*i-1)
-        # if not (self.blank_pos == blk-1 or self.blank_pos == blk*2 - 1 or self.blank_pos == blk*3 - 1):
-        if not condition:
-            self.numbers_list[self.blank_pos], self.numbers_list[self.blank_pos + 1] = \
-            self.numbers_list[self.blank_pos + 1], self.numbers_list[self.blank_pos]
-            self.blank_pos = self.blank_pos + 1
-        return self
-
-    def same_board(self, b2):
-        if self.numbers_list is b2.numbers_list:
-            return True
-        return False
-
-    def get_board_list(self):
-        return self.numbers_list
-
-
-    def __str__(self):
-        blk = self.block_size
-        string = ''
-        for i in range(blk):
-            string += str(self.numbers_list[blk*i:blk*(i+1)])
-            string += '\n'
-        return string
-
-    def __repr__(self):
-        return self.__str__()
 
 if __name__ == '__main__':
     # board = Board(list(i for i in range(9)))
     visited_states = []
-    # board = Board([1,5,2,3,9,6,7,15,4,10,11,14,8,'',12,13])
-    board = Board([1,2,7,10,13,6,15,23,8,14,16,9,20,12,5,17,18,'',19,4,21,22,11,24,3])
-    # board = Board([1,2,5,3,4,'',6,7,8])
-    # board = Board([1,'',2,3,4,5,6,7,8])
-    # board = Board([1,5,2,'',6,8,10,3,4,13,9,7,12,14,15,11])
+    # board = Board([2,8,5,15,9,4,12,3,7,1,11,14,13,'',6,10])
+    # board = Board([1,2,7,10,13,6,15,23,8,14,16,9,20,12,5,17,18,'',19,4,21,22,11,24,3])
+    board = Board([4,2,3,6,5,8,1,'',7])
+    # board = Board([1,2,5,3,'',4,6,7,8])
+    # board = Board([1,5,10,2,6,8,9,3,'',15,14,7,4,12,13,11])
     # print(board)
     # board = Board([1,4,2,3,'',5,6,7,8])
     solve_method= SolveBFS(board, visited_states)
