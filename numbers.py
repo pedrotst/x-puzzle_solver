@@ -13,6 +13,8 @@ from board import Board
 import time
 import random 
 from functools import partial
+from numbers_solver import *
+import pdb
 
 Builder.load_string('''
 <GameGrid>
@@ -26,6 +28,7 @@ Builder.load_string('''
             on_press: root.randomize()
         Button:
             text: 'solve'
+            on_press: root.solve()
     GridLayout:
         cols: 3
         rows: 3
@@ -86,7 +89,7 @@ class GameGrid(GridLayout):
                 child.texture_update()
                 child.do_layout()
 
-    def randomization_iteraction(self, move_list, *args):
+    def auto_move(self, move_list, *args):
         try:
             i = move_list.__next__()
             if i == 0:
@@ -98,7 +101,15 @@ class GameGrid(GridLayout):
             elif i == 3:
                 self.board.move_right()
         except StopIteration:
-            Clock.unschedule(self.randomization_iteraction)
+            Clock.unschedule(self.auto_move)
+
+    def solve(self):
+        visited_states = []
+        move_list = []
+        solve_method = SolveBFS(self.board, visited_states)
+        solver = Solver(solve_method)
+        move_list = iter(solver.solve())
+        Clock.schedule_interval(partial(self.auto_move, move_list), .5)
 
     def randomize(self):
         # 0 = up
@@ -106,7 +117,7 @@ class GameGrid(GridLayout):
         # 2 = left
         # 3 = right
         move_list = iter([random.randint(0,4) for i in range(random.randint(0,300))])
-        Clock.schedule_interval(partial(self.randomization_iteraction, move_list), .09)
+        Clock.schedule_interval(partial(self.auto_move, move_list), .009)
         # print (random_moves)
         # for b in random_moves:
         #     x = ListProperty(b)

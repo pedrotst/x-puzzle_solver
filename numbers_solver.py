@@ -30,6 +30,7 @@ class Tree(object):
         heuristic = 0
         x = board.index('')
         board[x] = 0
+        board = [int(x) for x in board]
         board_matrix = [(x,y) for x in range(self.state.block_size) for y in range(self.state.block_size)]
         # board_abs = [i for i in range(9)]
         # map_mat = zip(board_abs, board_comparator)
@@ -71,43 +72,47 @@ class Tree(object):
     #     self.down = tree
 
 class SolveMethod():
-    def __init__(self, initial_state, visited_states):
-        self.fringe = [Tree(state = initial_state)]
+    def __init__(self, initial_board, visited_states):
+        self.fringe = [Tree(state = initial_board)]
         # print(self.fringe[0].state)
         self.visited_states = visited_states
-        if not self.is_visited(initial_state):
-            self.add_visited(initial_state)
+        if not self.is_visited(initial_board):
+            self.add_visited(initial_board)
 
-        self.final_state = [i for i in range(initial_state.block_size ** 2)]
+        self.final_state = [str(i) for i in range(initial_board.block_size ** 2)]
         self.final_state[0] = ''
 
     def expand_nodes(self, node):
         """
         :param node: is a board
         :return: sucessors
-        """
+        """        
+        # 0 = up
+        # 1 = down
+        # 2 = left
+        # 3 = right
         c1, c2 = Board(list(node.state.get_board_list())), Board(list(node.state.get_board_list()))
         c3, c4 = Board(list(node.state.get_board_list())), Board(list(node.state.get_board_list()))
         sucessors = []
         up = c1.move_up()
         if not self.is_visited(up):
-            sucessors.append(Tree('up', node, up))
+            sucessors.append(Tree(0, node, up))
             self.add_visited(up)
 
         down = c2.move_down()
         if(not self.is_visited(down)):
-            sucessors.append(Tree('down', node, down))
+            sucessors.append(Tree(1, node, down))
             self.add_visited(down)
         # sucessors += [Tree('down', node, down)] if not self.is_visited(down) else []
 
         left = c3.move_left()
         if not self.is_visited(left):
-            sucessors.append(Tree('left', node, left))
+            sucessors.append(Tree(2, node, left))
             self.add_visited(left)
 
         right = c4.move_right()
         if not self.is_visited(right):
-            sucessors.append(Tree('right', node, right))
+            sucessors.append(Tree(3, node, right))
             self.add_visited(right)
         return sucessors
 
@@ -149,21 +154,20 @@ class SolveBFS(SolveMethod):
             # print(node)
 
 
-class Solver(threading.Thread):
-    def __init__(self, initial_state, solve_method):
-        super(Solver, self).__init__()
+class Solver():
+    def __init__(self, solve_method):
         self.solver = solve_method
 
-    def run(self):
+    def solve(self):
         x = self.solver.tree_search()
+        solution = []
         if x:
-            print(x.state)
+            solution.append(x.action)
             y = x.parent
             while y is not None:
-                print(y.state)
+                solution.append(y.action)
                 y = y.parent
-        else:
-            print("No solution Found!")
+        return(solution[-2::-1]) #reversed, cutting out the root
 
 
 if __name__ == '__main__':
@@ -171,14 +175,15 @@ if __name__ == '__main__':
     visited_states = []
     # board = Board([2,8,5,15,9,4,12,3,7,1,11,14,13,'',6,10])
     # board = Board([1,2,7,10,13,6,15,23,8,14,16,9,20,12,5,17,18,'',19,4,21,22,11,24,3])
-    board = Board([4,2,3,6,5,8,1,'',7])
+    board = Board(['4','2','3','6','5','8','1','','7'])
     # board = Board([1,2,5,3,'',4,6,7,8])
     # board = Board([1,5,10,2,6,8,9,3,'',15,14,7,4,12,13,11])
     # print(board)
     # board = Board([1,4,2,3,'',5,6,7,8])
     solve_method= SolveBFS(board, visited_states)
-    solver = Solver(board,solve_method)
+    solver = Solver(solve_method)
     # solver.run()
-    solver.run()
+    solution = solver.solve()
+    print(solution)
     # t = Tree(state = board)
     # print("Heuristic: {}".format(t.heuristic))
