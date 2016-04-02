@@ -13,7 +13,7 @@ from board import Board
 import time
 import random 
 from functools import partial
-from numbers_solver import *
+from solver import *
 import pdb
 
 Builder.load_string('''
