@@ -1,7 +1,12 @@
 from math import sqrt
-from gmpy import is_square
 import random
 from copy import copy
+
+def is_square(n):
+    if n in [i for i in range(1000) if sqrt(i) == int(sqrt(i))]:
+        return True
+    return False
+
 
 class Board(object):
     def __init__(self, numbers_list):
